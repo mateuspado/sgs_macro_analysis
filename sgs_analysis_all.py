@@ -1,21 +1,21 @@
-# Importa as bibliotecas
-import numpy as np
+# Importing the necessary libraries
 import pandas as pd
-import datetime as dt
 import time
 import ipeadatapy as ip
 from bcb import sgs
 from matplotlib import pyplot as plt
 import seaborn as sns
 
-comprometimento = sgs.get({'comprometimento de renda' : 19879}, start='2019-01-01')
-
 # Busca as séries sobre concessões de crédito no SGS
-credito = sgs.get({'total' : 20631,
-                   'pj' : 20632,
-                   'pf' : 20633,
-                   'livre' : 20634,
-                   'direcionado' : 20685}, start='2019-01-01', end = time.strftime("%Y-%m-%d"))
+credito = sgs.get({'Saldo pf' : 20541,
+                   'Concessoes total' : 20631,
+                   'Concessoes pj' : 20632,
+                   'Concessoes pf' : 20633,
+                   'Concessoes livre' : 20634,
+                   'Concessoes direcionado' : 20685,
+                   'credito total': 20539}, start='2019-01-01', end = time.strftime("%Y-%m-%d"))
+
+comprometimento = sgs.get({'comprometimento de renda' : 19879}, start='2019-01-01')
 
 # Divide a série por 1000
 credito = credito.div(1000)
@@ -43,8 +43,7 @@ credito_reais = credito.mul(deflator.ipca, axis = 'index')
 dadosmacro = sgs.get({'inadimplencia' : 21082,
                     'juro' : 20714,
                  'spread' : 20783,
-                 'desemprego': 24369,
-                 'credito total': 20539}, start='2019-01-01')
+                 'desemprego': 24369}, start='2019-01-01')
 
 selic = sgs.get({'selic': 432}, start='2019-01-01')
 
@@ -53,8 +52,8 @@ macrocredito = dadosmacro.merge(comprometimento, on = 'Date', how = 'left').merg
 macrocredito_reais = dadosmacro.merge(comprometimento, on = 'Date', how = 'left').merge(selic, on = 'Date', how = 'left').merge(credito_reais, on = 'Date', how = 'left')
 
 # Criando planilhas para os dados
-macrocredito.to_csv('macrocredito.csv')
-macrocredito_reais.to_csv('macrocredito_reais.csv')
+macrocredito.to_excel('macrocredito.xlsx')
+macrocredito_reais.to_excel('macrocredito_reais.xlsx')
 
 # Torna em formato long
 macrocredito_long = pd.melt(macrocredito.reset_index(),
@@ -89,7 +88,7 @@ sns.set_theme(rc = theme,
 sns.lineplot(x = 'Date',
              y = 'values',
              hue = 'variable',
-             data = macrocredito_reais_long[macrocredito_reais_long.variable.isin(['total', 'livre'])]).set(title = 'Concessões desinflacionárias mensais de crédito: TotalxLivre',
+             data = macrocredito_reais_long[macrocredito_reais_long.variable.isin(['Concessoes total', 'Concessoes livre'])]).set(title = 'Concessões desinflacionárias mensais de crédito: TotalxLivre',
                                                 xlabel = '',
                                                 ylabel = 'R$ Bilhões')
 
@@ -159,4 +158,22 @@ plt.annotate('Fonte: Dados do BCB/SGS',
             fontsize=10)
 
 plt.savefig('inadimplencia_spread.png')
+
+# Plota o dados de taxas de juros
+sns.lineplot(x = 'Date',
+             y = 'values',
+             hue = 'variable',
+             data = macrocredito_long[macrocredito_long.variable.isin(['inadimplencia','comprometimento de renda', 'Saldo pf'])]).set(title = 'Inadimplencia X Comprometimento X Saldo pf',
+                                                xlabel = '',
+                                                ylabel = 'R$ Bilhões & Em porcentagem(%)')
+
+# Adiciona a fonte no gráfico           
+plt.annotate('Fonte: Dados do BCB/SGS',
+            xy = (1.0, -0.07),
+            xycoords='axes fraction',
+            ha='right',
+            va="center",
+            fontsize=10)
+
+plt.savefig('inadimplencia_saldo.png')
 
